@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Independent Format Clock - Plain Dark Mode Background</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Define reusable colors - Clean Dark Theme */
+            --bg-color: #1e1e1e; /* VS Code Dark Background */
+            --frame-color: #333333; /* Dark Grey Border */
+            --screen-color: #252526; /* Clock face background */
+            --text-color: #d4d4d4; /* Light text for high contrast */
+            --hand-color: #569cd6; /* VS Code Blue/Cyan for accent (Hands/Digital Time) */
+            --accent-color: #505050; /* Button background */
+            --digital-time-color: #569cd6; /* Blue for the main time */
+            --digital-ampm-color: #9cd656; /* Green for secondary info (AM/PM) */
+            --timer-alert-color: #f44747; /* Red for timer end */
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            
+            background-color: var(--bg-color); 
+            
+            font-family: 'Inter', sans-serif;
+            color: var(--text-color);
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative; 
+            overflow: hidden; 
+        }
+
+        .clock-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3vh;
+            max-width: 95%; 
+            width: 550px; 
+            background: rgba(37, 37, 38, 0.98); 
+            padding: 30px; 
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--frame-color);
+            z-index: 1; 
+        }
+
+        /* --- CLOCK FRAME --- */
+        .clock-frame {
+            width: 80vw;
+            max-width: 400px;
+            height: 80vw;
+            max-height: 400px;
+            background: var(--screen-color);
+            border: 5px solid var(--frame-color);
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 5px 15px rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border-radius: 50%; 
+            transition: border-radius 0.3s ease;
+        }
+
+        /* --- DIGITAL SCREEN --- */
+        .digital-screen {
+            display: none; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+
+        #digitalTime {
+            font-family: 'Roboto Mono', monospace; 
+            font-size: clamp(40px, 12vw, 80px); 
+            color: var(--digital-time-color);
+            margin: 0;
+            line-height: 1;
+            text-shadow: 0 0 5px rgba(86, 156, 214, 0.5);
+        }
+
+        #digitalAMPM {
+            font-family: 'Roboto Mono', monospace;
+            font-size: clamp(14px, 4vw, 24px);
+            color: var(--digital-ampm-color);
+            font-weight: bold;
+            margin-top: -5px;
+        }
+        
+        #digitalDate {
+            font-size: clamp(12px, 3vw, 16px);
+            color: var(--text-color);
+            margin-top: 5px;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* --- ANALOG DIAL & HANDS --- */
+        .analog-dial {
+            display: none; 
+            width: 95%;
+            height: 95%;
+            background: var(--screen-color);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .analog-dial::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: var(--hand-color);
+            border-radius: 50%;
+            z-index: 10;
+        }
+        .hour-hand, .minute-hand, .second-hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            /* Changed transition for smoother, non-bouncy second-hand movement */
+            transition: transform 0.1s linear; 
+            border-radius: 5px;
+            z-index: 20; 
+        }
+        .hour-hand { width: 5px; height: 25%; background: var(--text-color); }
+        .minute-hand { width: 3px; height: 35%; background: var(--text-color); }
+        .second-hand { width: 2px; height: 40%; background: var(--hand-color); }
+        
+        .markings {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .mark-number {
+            position: absolute;
+            font-family: 'Inter', sans-serif;
+            font-size: clamp(14px, 4vw, 20px);
+            font-weight: bold;
+            color: var(--text-color);
+            text-align: center;
+            width: 30px; 
+            height: 30px;
+            margin-left: -15px; 
+            margin-top: -15px; 
+        }
+        
+        .analog-date {
+            position: absolute;
+            bottom: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            font-size: clamp(12px, 3vw, 16px);
+            color: var(--text-color);
+            text-align: center;
+        }
+        
+        /* --- GENERAL CONTROLS STYLES --- */
+        .controls-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+        .button-group-style, .button-group-format {
+            display: flex;
+            flex-wrap: wrap; 
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            background: var(--accent-color);
+            border: none;
+            border-radius: 5px;
+            color: var(--text-color);
+            font-size: clamp(14px, 3.5vw, 16px);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            transition: background 0.2s;
+            font-weight: bold;
+        }
+
+        .control-btn:hover {
+            background: #404040;
+        }
+        
+        .active-mode {
+            background: var(--hand-color) !important;
+        }
+
+        /* --- TIMER SPECIFIC STYLES --- */
+        .timer-section {
+            width: 100%;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--frame-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .timer-display {
+            font-family: 'Roboto Mono', monospace;
+            font-size: clamp(30px, 10vw, 60px);
+            color: var(--digital-time-color);
+            text-shadow: 0 0 5px rgba(86, 156, 214, 0.5);
+            font-weight: bold;
+        }
+        
+        .timer-input-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .timer-input-group input {
+            width: 60px;
+            padding: 10px 5px;
+            text-align: center;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 16px;
+            background: var(--screen-color);
+            border: 1px solid var(--frame-color);
+            border-radius: 5px;
+            color: var(--text-color);
+            
+        }
+        .timer-input-group input::-webkit-outer-spin-button,
+        .timer-input-group input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .timer-input-group span {
+            display: flex;
+            align-items: center;
+            color: var(--text-color);
+            font-size: 16px;
+        }
+        
+        .timer-input-group input:focus {
+            outline: none;
+            border-color: var(--hand-color);
+            box-shadow: 0 0 5px var(--hand-color);
+        }
+        
+        .timer-alert {
+            color: var(--timer-alert-color) !important;
+            text-shadow: 0 0 10px var(--timer-alert-color);
+        }
+        
+        .timer-controls button {
+            background: var(--accent-color);
+        }
+        
+        #timerStartBtn {
+            background: var(--digital-ampm-color); 
+            color: var(--bg-color);
+        }
+
+        #timerStartBtn:hover {
+            background: #a8e67a;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="clock-container">
+        
+        <div class="clock-frame" id="clockFrame">
+            <div class="digital-screen" id="digitalScreen">
+                <p id="digitalTime">12:00:00</p>
+                <p id="digitalAMPM">AM</p>
+                <p id="digitalDate"></p>
+            </div>
+            
+            <div id="analogDial" class="analog-dial">
+                <div class="markings" id="markings"></div>
+                <div class="hour-hand" id="hourHand"></div>
+                <div class="minute-hand" id="minuteHand"></div>
+                <div class="second-hand" id="secondHand"></div>
+                <p class="analog-date" id="analogDate"></p> </div>
+        </div>
+
+        <div class="controls-group">
+            <div class="button-group-style">
+                <button id="styleDigitalBtn" class="control-btn active-mode">Digital Clock</button>
+                <button id="styleAnalogBtn" class="control-btn">Analog Clock</button>
+            </div>
+
+            <div class="button-group-format">
+                <button id="toggleFormatBtn" class="control-btn">Toggle 24-Hour Format</button>
+            </div>
+        </div>
+        
+        <div class="timer-section">
+            <div class="timer-display" id="timerDisplay">00:00:00</div>
+            
+            <div class="timer-input-group">
+                <input type="text" id="timerInputH" value="0" placeholder="HH" maxlength="2">
+                <span>H</span>
+                <input type="text" id="timerInputM" value="5" placeholder="MM" maxlength="2">
+                <span>M</span>
+                <input type="text" id="timerInputS" value="0" placeholder="SS" maxlength="2">
+                <span>S</span>
+            </div>
+            
+            <div class="timer-controls button-group-style">
+                <button id="timerStartBtn" class="control-btn">Start</button>
+                <button id="timerResetBtn" class="control-btn">Reset</button>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // --- Clock State Variables ---
+        let currentStyle = 'digital'; 
+        let is24HourFormat = false; 
+        
+        // --- Timer State Variables ---
+        let countdownInterval;
+        let totalSeconds = 0;
+        let isRunning = false;
+        
+        // --- ELEMENTS (Clock) ---
+        const clockFrame = document.getElementById("clockFrame");
+        const digitalScreen = document.getElementById("digitalScreen");
+        const digitalTime = document.getElementById("digitalTime");
+        const digitalAMPM = document.getElementById("digitalAMPM");
+        const digitalDate = document.getElementById("digitalDate");
+        const analogDial = document.getElementById("analogDial");
+        const analogDate = document.getElementById("analogDate");
+        const hourHand = document.getElementById("hourHand");
+        const minuteHand = document.getElementById("minuteHand");
+        const secondHand = document.getElementById("secondHand");
+        const markingsDiv = document.getElementById("markings");
+        const styleDigitalBtn = document.getElementById("styleDigitalBtn");
+        const styleAnalogBtn = document.getElementById("styleAnalogBtn");
+        const toggleFormatBtn = document.getElementById("toggleFormatBtn");
+
+        // --- ELEMENTS (Timer) ---
+        const timerDisplay = document.getElementById("timerDisplay");
+        const timerInputH = document.getElementById("timerInputH");
+        const timerInputM = document.getElementById("timerInputM");
+        const timerInputS = document.getElementById("timerInputS");
+        const timerStartBtn = document.getElementById("timerStartBtn");
+        const timerResetBtn = document.getElementById("timerResetBtn");
+
+        const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        const months = ["January", "February", "March", "April", "May", "June",
+                         "July", "August", "September", "October", "November", "December"];
+
+        // ===================================
+        // --- INPUT VALIDATION FUNCTIONS ---
+        // ===================================
+        
+        function cleanLeadingZeros(inputElement, maxValue) {
+            let value = inputElement.value;
+            value = value.replace(/[^0-9]/g, '');
+
+            if (value.length > 1 && value.startsWith('0')) {
+                value = parseInt(value, 10).toString();
+            }
+
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue) && numValue > maxValue) {
+                value = String(maxValue);
+            }
+
+            if (value === "") {
+                value = "0";
+            }
+            
+            inputElement.value = value;
+        }
+
+        function validateNumericInput(event) {
+            const allowedKeys = [8, 9, 37, 39, 46]; // Backspace, Tab, Left Arrow, Right Arrow, Delete
+            
+            if (allowedKeys.includes(event.keyCode)) {
+                return;
+            }
+            
+            if ((event.keyCode < 48 || event.keyCode > 57) && (event.keyCode < 96 || event.keyCode > 105)) {
+                event.preventDefault();
+            }
+        }
+        
+        // ===================================
+        // --- CLOCK & TIMER FUNCTIONS ---
+        // ===================================
+
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours(); // 0-23
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            
+            const day = days[now.getDay()];
+            const month = months[now.getMonth()];
+            const date = now.getDate();
+            const year = now.getFullYear();
+            const fullDate = `${day}, ${month} ${date}, ${year}`;
+            
+            // --- Digital Time Calculation ---
+            let displayHours = hours;
+            let ampm = "";
+            let showAMPM = false;
+
+            if (!is24HourFormat) { 
+                ampm = hours >= 12 ? "PM" : "AM";
+                displayHours = hours % 12;
+                displayHours = displayHours ? displayHours : 12; 
+                showAMPM = true;
+            } 
+
+            const hh = displayHours < 10 ? "0" + displayHours : displayHours;
+            const mm = minutes < 10 ? "0" + minutes : minutes;
+            const ss = seconds < 10 ? "0" + seconds : seconds;
+            
+            if (currentStyle === 'digital') {
+                digitalTime.innerText = `${hh}:${mm}:${ss}`;
+                digitalAMPM.innerText = ampm;
+                digitalAMPM.style.display = showAMPM ? "block" : "none";
+                digitalDate.innerHTML = fullDate;
+            } else if (currentStyle === 'analog') {
+                const formatLabel = is24HourFormat ? "24-Hour Mode" : "12-Hour Mode";
+                analogDate.innerHTML = `${fullDate}<br>(${formatLabel})`;
+            }
+
+            // --- Analog Hand Rotation Calculation (FIXED) ---
+            // Second Hand: 360 degrees in 60 seconds
+            const secDeg = (seconds / 60) * 360; 
+            
+            // Minute Hand: 360 degrees in 60 minutes + 6 degrees for every second passed
+            const minDeg = (minutes / 60) * 360 + (seconds / 60) * 6;
+            
+            // Hour Hand: 360 degrees in 12 hours (30 deg/hr) + 0.5 degrees for every minute passed
+            // hours % 12 ensures we deal with a 12-hour cycle (0-11)
+            const hourDeg = (hours % 12 / 12) * 360 + (minutes / 60) * 30; 
+
+            secondHand.style.transform = `rotate(${secDeg}deg)`;
+            minuteHand.style.transform = `rotate(${minDeg}deg)`;
+            hourHand.style.transform = `rotate(${hourDeg}deg)`;
+        }
+
+        function setDisplayStyle(style) {
+            currentStyle = style;
+            digitalScreen.style.display = style === 'digital' ? 'flex' : 'none';
+            analogDial.style.display = style === 'analog' ? 'block' : 'none';
+            styleDigitalBtn.classList.toggle('active-mode', style === 'digital');
+            styleAnalogBtn.classList.toggle('active-mode', style === 'analog');
+            clockFrame.style.borderRadius = style === 'digital' ? '30px' : '50%';
+            updateClock();
+        }
+
+        function toggleTimeFormat() {
+            is24HourFormat = !is24HourFormat;
+            toggleFormatBtn.innerText = is24HourFormat ? "Switch to 12-Hour Format" : "Switch to 24-Hour Format";
+            updateClock();
+        }
+        
+        function setupAnalogMarkings() {
+            const radius = 50; 
+            const center = 50; 
+            for (let i = 1; i <= 12; i++) {
+                const hourMarker = document.createElement('div');
+                hourMarker.classList.add('mark-number');
+                hourMarker.innerText = i;
+                // Calculate position on the circle (30 degrees per hour)
+                const angle = (i * 30 - 90) * (Math.PI / 180); 
+                // Position numbers slightly inward (40% distance)
+                const x = center + 40 * Math.cos(angle);
+                const y = center + 40 * Math.sin(angle);
+                hourMarker.style.left = `${x}%`;
+                hourMarker.style.top = `${y}%`;
+                markingsDiv.appendChild(hourMarker);
+            }
+        }
+        
+        function updateTimerDisplay(timeInSeconds) {
+            const h = Math.floor(timeInSeconds / 3600);
+            const m = Math.floor((timeInSeconds % 3600) / 60);
+            const s = timeInSeconds % 60;
+            
+            const displayH = h.toString().padStart(2, '0');
+            const displayM = m.toString().padStart(2, '0');
+            const displayS = s.toString().padStart(2, '0');
+            
+            timerDisplay.innerText = `${displayH}:${displayM}:${displayS}`;
+
+            if (timeInSeconds <= 10 && timeInSeconds > 0) {
+                timerDisplay.classList.add('timer-alert');
+            } else {
+                timerDisplay.classList.remove('timer-alert');
+            }
+        }
+        
+        function startTimer() {
+            if (isRunning) {
+                pauseTimer();
+                return;
+            }
+            
+            // Validate and clean inputs on start/resume
+            cleanLeadingZeros(timerInputH, 99);
+            cleanLeadingZeros(timerInputM, 59);
+            cleanLeadingZeros(timerInputS, 59);
+
+            if (totalSeconds === 0) {
+                const h = parseInt(timerInputH.value) || 0;
+                const m = parseInt(timerInputM.value) || 0;
+                const s = parseInt(timerInputS.value) || 0;
+                totalSeconds = h * 3600 + m * 60 + s;
+                if (totalSeconds <= 0) {
+                    alert("Please set a time greater than zero.");
+                    return;
+                }
+            }
+
+            isRunning = true;
+            timerStartBtn.innerText = "Pause";
+            timerStartBtn.style.backgroundColor = "#f44747"; // Red for pause/stop
+            
+            timerInputH.disabled = true;
+            timerInputM.disabled = true;
+            timerInputS.disabled = true;
+
+            countdownInterval = setInterval(() => {
+                if (totalSeconds <= 0) {
+                    clearInterval(countdownInterval);
+                    isRunning = false;
+                    timerStartBtn.innerText = "Start";
+                    timerStartBtn.style.backgroundColor = "#9cd656";
+                    timerDisplay.innerText = "TIME'S UP!";
+                    timerDisplay.classList.add('timer-alert');
+                    
+                    timerInputH.disabled = false;
+                    timerInputM.disabled = false;
+                    timerInputS.disabled = false;
+                    return;
+                }
+
+                totalSeconds--;
+                updateTimerDisplay(totalSeconds);
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(countdownInterval);
+            isRunning = false;
+            timerStartBtn.innerText = "Resume";
+            timerStartBtn.style.backgroundColor = "#569cd6"; // Blue for resume
+        }
+
+        function resetTimer() {
+            clearInterval(countdownInterval);
+            isRunning = false;
+            totalSeconds = 0;
+            
+            // Reset input values
+            timerInputH.value = "0";
+            timerInputM.value = "5"; // Default to 5 minutes for easy start
+            timerInputS.value = "0";
+
+            updateTimerDisplay(0); // Set display to 00:00:00
+            timerStartBtn.innerText = "Start";
+            timerStartBtn.style.backgroundColor = "#9cd656";
+            timerDisplay.classList.remove('timer-alert');
+            
+            timerInputH.disabled = false;
+            timerInputM.disabled = false;
+            timerInputS.disabled = false;
+        }
+
+        // ===================================
+        // --- INITIALIZATION ---
+        // ===================================
+
+        document.addEventListener("DOMContentLoaded", function() {
+            setupAnalogMarkings();
+
+            // Clock Button Event Listeners
+            styleDigitalBtn.addEventListener("click", () => setDisplayStyle('digital'));
+            styleAnalogBtn.addEventListener("click", () => setDisplayStyle('analog'));
+            toggleFormatBtn.addEventListener("click", toggleTimeFormat);
+
+            // Timer Button Event Listeners
+            timerStartBtn.addEventListener("click", startTimer);
+            timerResetBtn.addEventListener("click", resetTimer);
+            
+            // Input Validation Event Listeners
+            timerInputH.addEventListener('keydown', validateNumericInput);
+            timerInputM.addEventListener('keydown', validateNumericInput);
+            timerInputS.addEventListener('keydown', validateNumericInput);
+
+            timerInputH.addEventListener('blur', () => cleanLeadingZeros(timerInputH, 99));
+            timerInputM.addEventListener('blur', () => cleanLeadingZeros(timerInputM, 59));
+            timerInputS.addEventListener('blur', () => cleanLeadingZeros(timerInputS, 59));
+
+            // Set up the clock interval and initial state
+            setInterval(updateClock, 1000);
+            
+            // Initialize to 12-Hour Format and Digital Style
+            is24HourFormat = true; 
+            toggleTimeFormat(); 
+            setDisplayStyle('digital'); 
+            resetTimer(); 
+        });
+    </script>
+</body>
+</html>
